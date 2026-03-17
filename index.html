@@ -151,6 +151,7 @@ html, body {
   border: 0.5px solid var(--border);
   overflow: hidden;
   transition: border-color 0.15s;
+  flex-shrink: 0;
 }
 .slide-card.done-card { border-color: #C0DD97; }
 
@@ -290,6 +291,7 @@ html, body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: border-color 0.15s;
+  flex-shrink: 0;
 }
 .deck-card:active { border-color: var(--accent); }
 
@@ -1250,6 +1252,10 @@ function editSlide(id) {
       '<button class="btn-cancel" onclick="render()">Cancel</button>' +
       '<button class="btn-save" onclick="saveEdit(' + id + ')">Save</button>' +
     '</div>';
+  setTimeout(() => {
+    const actions = n.querySelector('.edit-actions');
+    if (actions) actions.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
 }
 
 function saveEdit(id) {
