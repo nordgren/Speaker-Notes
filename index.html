@@ -195,6 +195,14 @@ html, body {
 .slide-notes { padding: 0 12px 12px; display: none; }
 .slide-notes.open { display: block; }
 .notes-text { font-size: 13px; color: var(--muted); line-height: 1.65; white-space: pre-wrap; }
+.notes-text mark { background: var(--warn-light); color: var(--warn-dark); padding: 1px 4px; border-radius: 3px; }
+.notes-text strong { color: var(--text); font-weight: 600; }
+.notes-text em { font-style: italic; }
+.present-notes-big mark { background: var(--warn-light); color: var(--warn-dark); padding: 2px 6px; border-radius: 4px; }
+.present-notes-big strong { color: var(--text); font-weight: 500; }
+.present-notes-big em { font-style: italic; }
+.format-hint { font-size: 10px; color: var(--hint); font-family: var(--font-mono); margin-top: 6px; }
+.format-hint code { background: var(--surface); border: 0.5px solid var(--border); padding: 1px 4px; border-radius: 3px; font-size: 10px; }
 
 .notes-textarea {
   width: 100%; font-size: 13px; color: var(--text); line-height: 1.65;
@@ -503,7 +511,7 @@ html, body {
     <div class="safe-top"></div>
     <div class="status-bar">
       <span id="time-display-home">09:41</span>
-      <span style="font-size:14px;letter-spacing:2px">···</span>
+      <span style="font-size:14px;letter-spacing:2px">&middot;&middot;&middot;</span>
     </div>
     <div class="nav-bar">
       <div>
@@ -515,7 +523,7 @@ html, body {
     <div class="scroll-area" id="deckList"></div>
     <div class="bottom-bar">
       <div class="add-slide-row">
-        <input class="add-input" id="newDeckName" placeholder="New deck name…" />
+        <input class="add-input" id="newDeckName" placeholder="New deck name&hellip;" />
         <button class="btn-add" onclick="createDeck()">+</button>
       </div>
     </div>
@@ -527,11 +535,11 @@ html, body {
     <div class="safe-top"></div>
     <div class="status-bar">
       <span id="time-display">09:41</span>
-      <span style="font-size:14px;letter-spacing:2px">···</span>
+      <span style="font-size:14px;letter-spacing:2px">&middot;&middot;&middot;</span>
     </div>
     <div class="nav-bar">
       <div class="nav-left">
-        <button class="btn-back" onclick="closeDeck()">&#8592;</button>
+        <button class="btn-back" onclick="closeDeck()">&larr;</button>
         <div style="min-width:0">
           <div class="nav-title" id="deck-name-title">Deck</div>
           <div class="nav-subtitle" id="deck-label">No slides yet</div>
@@ -548,7 +556,7 @@ html, body {
     <div class="scroll-area" id="slideList"></div>
     <div class="bottom-bar">
       <div class="add-slide-row">
-        <input class="add-input" id="newSlideTitle" placeholder="Add slide title…" />
+        <input class="add-input" id="newSlideTitle" placeholder="Add slide title&hellip;" />
         <input class="add-timing-input" id="newSlideMins" type="number" min="0" placeholder="min" />
         <button class="btn-add" onclick="addSlide()">+</button>
       </div>
@@ -562,7 +570,7 @@ html, body {
     <div class="present-header">
       <div>
         <div class="present-header-info" id="present-slide-counter">Slide 1 of 1</div>
-        <div class="present-header-title" id="present-slide-title">—</div>
+        <div class="present-header-title" id="present-slide-title">&mdash;</div>
       </div>
       <button class="present-exit" onclick="exitPresenting()">Exit</button>
     </div>
@@ -583,13 +591,13 @@ html, body {
       <div class="present-notes-big" id="present-notes-content">No notes.</div>
     </div>
     <div class="present-nav">
-      <button class="nav-arrow" id="btn-prev" onclick="presentPrev()">&#8592;</button>
+      <button class="nav-arrow" id="btn-prev" onclick="presentPrev()">&larr;</button>
       <div class="present-prog">
         <div class="present-prog-bar"><div class="present-prog-fill" id="presentProgFill" style="width:0%"></div></div>
         <div class="present-prog-label"><span id="prog-pct">0% done</span><span id="prog-done">0 done</span></div>
       </div>
       <button class="done-btn" onclick="markCurrentDone()">&#10003;</button>
-      <button class="nav-arrow accent" id="btn-next" onclick="presentNext()">&#8594;</button>
+      <button class="nav-arrow accent" id="btn-next" onclick="presentNext()">&rarr;</button>
     </div>
     <div class="present-safe-bottom"></div>
   </div>
@@ -667,11 +675,11 @@ function loadAllDecks() {
     id: 1,
     name: 'Example Presentation',
     slides: [
-      { id:1, title:"Opening & Agenda",   notes:"Welcome the audience. Briefly outline the three key topics. Keep this under 2 minutes \u2014 energy sets the tone.", mins:2,  done:false },
-      { id:2, title:"Problem Statement",  notes:"Anchor the pain point before anything else. Use the operational cost slide to create urgency. Pause after the headline stat.", mins:5,  done:false },
-      { id:3, title:"Our Approach",       notes:"Three-engine model: Design, Ops, Quality. These aren\u2019t silos \u2014 they feed each other. Draw the loop on the whiteboard if in-person.", mins:10, done:false },
-      { id:4, title:"Roadmap 2025\u201326",    notes:"Keep it high-level. Q1: foundations. Q2: pilots. H2: scale. Avoid getting dragged into specifics \u2014 use the parking lot.", mins:8,  done:false },
-      { id:5, title:"Q&A & Next Steps",   notes:"Summarize the three asks: budget approval, pilot team nomination, sponsor meeting before April. Leave at least 10 minutes.", mins:10, done:false }
+      { id:1, title:"Opening & Agenda",   notes:"**Welcome the audience.** Briefly outline the *three key topics*. ==Keep this under 2 minutes== \u2014 energy sets the tone.", mins:2,  done:false },
+      { id:2, title:"Problem Statement",  notes:"Anchor the pain point before anything else. Use the ==operational cost slide== to create urgency. **Pause after the headline stat.**", mins:5,  done:false },
+      { id:3, title:"Our Approach",       notes:"Three-engine model: *Design, Ops, Quality*. These aren\u2019t silos \u2014 they feed each other. ==Draw the loop on the whiteboard== if in-person.", mins:10, done:false },
+      { id:4, title:"Roadmap 2025\u201326",    notes:"Keep it **high-level**. Q1: foundations. Q2: pilots. H2: scale. ==Avoid getting dragged into specifics== \u2014 use the *parking lot*.", mins:8,  done:false },
+      { id:5, title:"Q&A & Next Steps",   notes:"Summarize the **three asks**: budget approval, pilot team nomination, sponsor meeting before April. ==Leave at least 10 minutes.==", mins:10, done:false }
     ],
     nextSlideId: 6,
     createdAt: now,
@@ -1140,10 +1148,19 @@ function renderHome() {
   renderSyncSection();
 }
 
-// ── Slide editor (largely unchanged) ──
+// ── Slide editor ──
 
 function escapeHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderNotes(text) {
+  if (!text) return '';
+  let h = escapeHtml(text);
+  h = h.replace(/==(.*?)==/g, '<mark>$1</mark>');
+  h = h.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  return h;
 }
 
 function fmtTime(s) {
@@ -1172,7 +1189,7 @@ function render() {
       ? '<span class="timing-badge">' + slide.mins + ' min</span>'
       : '<span class="timing-badge no-time">no time set</span>';
     const notesPreview = slide.notes
-      ? '<div class="notes-text">' + escapeHtml(slide.notes) + '</div>'
+      ? '<div class="notes-text">' + renderNotes(slide.notes) + '</div>'
       : '<div class="notes-text" style="color:var(--hint);font-style:italic">No notes. Tap edit to add.</div>';
 
     card.innerHTML =
@@ -1228,6 +1245,7 @@ function editSlide(id) {
       '<span class="timing-label">min</span>' +
     '</div>' +
     '<textarea class="notes-textarea" id="en-' + id + '">' + escapeHtml(s.notes) + '</textarea>' +
+    '<div class="format-hint"><code>**bold**</code> <code>*italic*</code> <code>==highlight==</code></div>' +
     '<div class="edit-actions">' +
       '<button class="btn-cancel" onclick="render()">Cancel</button>' +
       '<button class="btn-save" onclick="saveEdit(' + id + ')">Save</button>' +
@@ -1332,7 +1350,7 @@ function updatePresentView() {
   const pct = total ? Math.round(done/total*100) : 0;
   document.getElementById('present-slide-counter').textContent = 'Slide '+(presentIndex+1)+' of '+total;
   document.getElementById('present-slide-title').textContent = s.title;
-  document.getElementById('present-notes-content').textContent = s.notes || 'No notes for this slide.';
+  document.getElementById('present-notes-content').innerHTML = s.notes ? renderNotes(s.notes) : 'No notes for this slide.';
   document.getElementById('presentProgFill').style.width = pct+'%';
   document.getElementById('prog-pct').textContent = pct+'% done';
   document.getElementById('prog-done').textContent = done+' done';
