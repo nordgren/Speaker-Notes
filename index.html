@@ -396,7 +396,104 @@ html, body {
 }
 
 .present-safe-bottom { height: var(--safe-bottom); background: var(--card-bg); flex-shrink: 0; }
+
+/* ── Sync indicator ── */
+.sync-indicator {
+  font-size: 18px;
+  color: var(--hint);
+  cursor: default;
+  transition: color 0.2s;
+  line-height: 1;
+}
+.sync-indicator.synced { color: var(--success-dark); }
+.sync-indicator.error { color: var(--danger); }
+.sync-indicator.syncing {
+  color: var(--accent-text);
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── Sync section ── */
+.sync-section {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 0.5px solid var(--border);
+}
+.sync-section-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.sync-status-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--hint);
+}
+.sync-email {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.sync-link-row, .sync-email-row, .sync-signin-row, .sync-signin-email-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+}
+.sync-btn {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  border-radius: 8px;
+  border: 0.5px solid var(--accent);
+  background: var(--accent-light);
+  color: var(--accent-text);
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.sync-btn.secondary {
+  border-color: var(--border-mid);
+  background: transparent;
+  color: var(--muted);
+}
+.sync-email-input {
+  flex: 1;
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 0.5px solid var(--border-mid);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  font-family: var(--font-sans);
+  -webkit-appearance: none;
+}
+.sync-email-input:focus { border-color: var(--accent); }
+
+/* ── Drag and drop ── */
+.drag-handle {
+  font-size: 14px;
+  color: var(--hint);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  padding: 2px 2px 2px 0;
+  flex-shrink: 0;
+  letter-spacing: -2px;
+}
+.drag-handle:active { cursor: grabbing; }
+.slide-card.dragging { opacity: 0.3; }
+.slide-card.drag-over { border-color: var(--accent); border-style: dashed; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="app">
@@ -413,6 +510,7 @@ html, body {
         <div class="nav-title">Speaker Notes</div>
         <div class="nav-subtitle" id="home-label">No decks yet</div>
       </div>
+      <span class="sync-indicator" id="syncIndicator" title="Offline">&#9729;</span>
     </div>
     <div class="scroll-area" id="deckList"></div>
     <div class="bottom-bar">
@@ -433,14 +531,14 @@ html, body {
     </div>
     <div class="nav-bar">
       <div class="nav-left">
-        <button class="btn-back" onclick="closeDeck()">←</button>
+        <button class="btn-back" onclick="closeDeck()">&#8592;</button>
         <div style="min-width:0">
           <div class="nav-title" id="deck-name-title">Deck</div>
           <div class="nav-subtitle" id="deck-label">No slides yet</div>
         </div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn-icon accent" onclick="startPresenting()">▶</button>
+        <button class="btn-icon accent" onclick="startPresenting()">&#9654;</button>
       </div>
     </div>
     <div class="progress-strip">
@@ -478,20 +576,20 @@ html, body {
       </div>
       <div class="timer-controls">
         <button class="timer-btn" id="timerToggle" onclick="toggleTimer()">Start</button>
-        <button class="timer-btn" onclick="resetTimer()">↺</button>
+        <button class="timer-btn" onclick="resetTimer()">&#8634;</button>
       </div>
     </div>
     <div class="present-notes-area">
       <div class="present-notes-big" id="present-notes-content">No notes.</div>
     </div>
     <div class="present-nav">
-      <button class="nav-arrow" id="btn-prev" onclick="presentPrev()">←</button>
+      <button class="nav-arrow" id="btn-prev" onclick="presentPrev()">&#8592;</button>
       <div class="present-prog">
         <div class="present-prog-bar"><div class="present-prog-fill" id="presentProgFill" style="width:0%"></div></div>
         <div class="present-prog-label"><span id="prog-pct">0% done</span><span id="prog-done">0 done</span></div>
       </div>
-      <button class="done-btn" onclick="markCurrentDone()">✓</button>
-      <button class="nav-arrow accent" id="btn-next" onclick="presentNext()">→</button>
+      <button class="done-btn" onclick="markCurrentDone()">&#10003;</button>
+      <button class="nav-arrow accent" id="btn-next" onclick="presentNext()">&#8594;</button>
     </div>
     <div class="present-safe-bottom"></div>
   </div>
@@ -501,6 +599,15 @@ html, body {
 <script>
 const STORAGE_KEY_V1 = 'speakernotes_v1';
 const STORAGE_KEY = 'speakernotes_v2';
+
+// ── Supabase config ──
+const SUPABASE_URL = 'https://trlfbszqlwgveultjili.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_KyCyHZ9PgQkarBsy7q8hvg_y_mQsfbo';
+let sb = null;
+let syncStatus = 'offline';
+let currentUserId = null;
+let localUpdatedAt = null;
+let pushTimer = null;
 
 // ── Multi-deck state ──
 let decks = [];
@@ -528,6 +635,7 @@ function loadAllDecks() {
       const d = JSON.parse(raw);
       decks = d.decks || [];
       nextDeckId = d.nextDeckId || (decks.length + 1);
+      localUpdatedAt = d.updatedAt || null;
       return;
     }
   } catch(e) {}
@@ -574,9 +682,11 @@ function loadAllDecks() {
 }
 
 function saveAllDecks() {
+  localUpdatedAt = new Date().toISOString();
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ decks, nextDeckId }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ decks, nextDeckId, updatedAt: localUpdatedAt }));
   } catch(e) {}
+  schedulePush();
 }
 
 function saveDeckData() {
@@ -587,6 +697,303 @@ function saveDeckData() {
   deck.nextSlideId = nextId;
   deck.updatedAt = new Date().toISOString();
   saveAllDecks();
+}
+
+// ── Supabase Cloud Sync ──
+
+function setSyncStatus(status) {
+  syncStatus = status;
+  renderSyncIndicator();
+}
+
+function renderSyncIndicator() {
+  const el = document.getElementById('syncIndicator');
+  if (!el) return;
+  switch (syncStatus) {
+    case 'syncing':
+      el.textContent = '\u21BB';
+      el.className = 'sync-indicator syncing';
+      el.title = 'Syncing\u2026';
+      break;
+    case 'synced':
+      el.textContent = '\u2601';
+      el.className = 'sync-indicator synced';
+      el.title = 'Synced';
+      break;
+    case 'error':
+      el.textContent = '\u2601';
+      el.className = 'sync-indicator error';
+      el.title = 'Sync error';
+      break;
+    default:
+      el.textContent = '\u2601';
+      el.className = 'sync-indicator';
+      el.title = 'Offline';
+  }
+}
+
+function schedulePush() {
+  if (pushTimer) clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => { pushToCloud(); }, 2000);
+}
+
+async function initSupabase() {
+  if (typeof supabase === 'undefined') return;
+  try {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        currentUserId = session.user.id;
+        renderSyncSection();
+        if (event === 'SIGNED_IN') {
+          await pullFromCloud();
+        }
+      }
+    });
+
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      const { data, error } = await sb.auth.signInAnonymously();
+      if (error) { setSyncStatus('error'); return; }
+      currentUserId = data.session.user.id;
+    } else {
+      currentUserId = session.user.id;
+    }
+
+    renderSyncSection();
+    await pullFromCloud();
+  } catch (e) {
+    console.error('Supabase init error:', e);
+    setSyncStatus('error');
+  }
+}
+
+async function pullFromCloud() {
+  if (!sb || !currentUserId) return;
+  setSyncStatus('syncing');
+  try {
+    const { data, error } = await sb.from('user_data')
+      .select('data, updated_at')
+      .eq('user_id', currentUserId)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      await pushToCloud();
+      return;
+    }
+    if (error) { setSyncStatus('error'); return; }
+
+    const remoteTime = new Date(data.updated_at).getTime();
+    const localTime = localUpdatedAt ? new Date(localUpdatedAt).getTime() : 0;
+
+    if (remoteTime > localTime) {
+      const remote = data.data;
+      decks = remote.decks || [];
+      nextDeckId = remote.nextDeckId || (decks.length + 1);
+      localUpdatedAt = data.updated_at;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ decks, nextDeckId, updatedAt: localUpdatedAt }));
+      } catch(e) {}
+      if (currentDeckId !== null) {
+        const deck = decks.find(d => d.id === currentDeckId);
+        if (deck) { slides = deck.slides; nextId = deck.nextSlideId; render(); }
+        else { closeDeck(); }
+      } else {
+        renderHome();
+      }
+      setSyncStatus('synced');
+    } else if (localTime > remoteTime) {
+      await pushToCloud();
+    } else {
+      setSyncStatus('synced');
+    }
+  } catch (e) {
+    console.error('Pull error:', e);
+    setSyncStatus('error');
+  }
+}
+
+async function pushToCloud() {
+  if (!sb || !currentUserId) return;
+  setSyncStatus('syncing');
+  try {
+    const { error } = await sb.from('user_data')
+      .upsert({
+        user_id: currentUserId,
+        data: { decks, nextDeckId },
+        updated_at: localUpdatedAt || new Date().toISOString()
+      }, { onConflict: 'user_id' });
+
+    if (error) { setSyncStatus('error'); return; }
+    setSyncStatus('synced');
+  } catch (e) {
+    console.error('Push error:', e);
+    setSyncStatus('error');
+  }
+}
+
+// ── Email auth for cross-device sync ──
+
+async function upgradeWithEmail(email) {
+  if (!sb) return;
+  try {
+    const { error } = await sb.auth.updateUser({ email });
+    if (error) { alert('Error: ' + error.message); return; }
+    alert('Magic link sent to ' + email + '. Check your inbox!');
+    renderSyncSection();
+  } catch (e) { alert('Error sending magic link.'); }
+}
+
+async function signInWithEmail(email) {
+  if (!sb) return;
+  try {
+    const { error } = await sb.auth.signInWithOtp({ email });
+    if (error) { alert('Error: ' + error.message); return; }
+    alert('Magic link sent to ' + email + '. Check your inbox!');
+  } catch (e) { alert('Error sending magic link.'); }
+}
+
+function renderSyncSection() {
+  const el = document.getElementById('syncSection');
+  if (!el) return;
+
+  if (!sb || !currentUserId) {
+    el.innerHTML = '<div class="sync-section-inner"><span class="sync-status-text">\u2601 Offline</span></div>';
+    return;
+  }
+
+  sb.auth.getUser().then(({ data: { user } }) => {
+    const email = user?.email;
+    const isAnon = user?.is_anonymous;
+
+    let st = syncStatus === 'synced' ? '\u2601 Synced' :
+             syncStatus === 'syncing' ? '\u21BB Syncing\u2026' :
+             syncStatus === 'error' ? '\u2601 Sync error' : '\u2601 Offline';
+
+    let h = '<div class="sync-section-inner"><span class="sync-status-text">' + st + '</span>';
+
+    if (email && !isAnon) {
+      h += '<span class="sync-email">Signed in as ' + escapeHtml(email) + '</span>';
+    } else {
+      if (isAnon) {
+        h += '<div class="sync-link-row" id="syncLinkRow">' +
+          '<button class="sync-btn" onclick="document.getElementById(\'syncLinkRow\').style.display=\'none\';document.getElementById(\'syncEmailRow\').style.display=\'flex\';document.getElementById(\'syncEmailInput\').focus()">Link email for cross-device sync</button></div>' +
+          '<div class="sync-email-row" id="syncEmailRow" style="display:none">' +
+          '<input class="sync-email-input" id="syncEmailInput" type="email" placeholder="your@email.com" />' +
+          '<button class="sync-btn" onclick="var e=document.getElementById(\'syncEmailInput\').value.trim();if(e)upgradeWithEmail(e)">Send link</button></div>';
+      }
+      h += '<div class="sync-signin-row" id="syncSigninRow">' +
+        '<button class="sync-btn secondary" onclick="document.getElementById(\'syncSigninRow\').style.display=\'none\';document.getElementById(\'syncSigninEmailRow\').style.display=\'flex\';document.getElementById(\'syncSigninEmailInput\').focus()">Sign in with email</button></div>' +
+        '<div class="sync-signin-email-row" id="syncSigninEmailRow" style="display:none">' +
+        '<input class="sync-email-input" id="syncSigninEmailInput" type="email" placeholder="your@email.com" />' +
+        '<button class="sync-btn" onclick="var e=document.getElementById(\'syncSigninEmailInput\').value.trim();if(e)signInWithEmail(e)">Send link</button></div>';
+    }
+
+    h += '</div>';
+    el.innerHTML = h;
+  });
+}
+
+// ── Drag and drop (slide reorder) ──
+
+let dragSrcIndex = null;
+let touchDragState = null;
+
+function onDragStart(e, i) {
+  dragSrcIndex = i;
+  e.dataTransfer.effectAllowed = 'move';
+  e.target.closest('.slide-card').classList.add('dragging');
+}
+
+function onDragOver(e, i) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const cards = document.querySelectorAll('#slideList .slide-card');
+  cards.forEach(c => c.classList.remove('drag-over'));
+  e.target.closest('.slide-card')?.classList.add('drag-over');
+}
+
+function onDrop(e, i) {
+  e.preventDefault();
+  if (dragSrcIndex === null || dragSrcIndex === i) return;
+  const [moved] = slides.splice(dragSrcIndex, 1);
+  slides.splice(i, 0, moved);
+  dragSrcIndex = null;
+  saveDeckData();
+  render();
+}
+
+function onDragEnd(e) {
+  document.querySelectorAll('#slideList .slide-card').forEach(c => {
+    c.classList.remove('dragging', 'drag-over');
+    c.draggable = false;
+  });
+  dragSrcIndex = null;
+}
+
+function initTouchDrag(e, index) {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const card = e.target.closest('.slide-card');
+  const rect = card.getBoundingClientRect();
+  const list = document.getElementById('slideList');
+  const cards = Array.from(list.querySelectorAll('.slide-card'));
+
+  const ghost = card.cloneNode(true);
+  ghost.style.cssText = 'position:fixed;width:' + rect.width + 'px;left:' + rect.left +
+    'px;top:' + (touch.clientY - (touch.clientY - rect.top)) +
+    'px;z-index:1000;opacity:0.9;box-shadow:0 4px 20px rgba(0,0,0,0.18);pointer-events:none;transition:none;';
+  document.body.appendChild(ghost);
+  card.classList.add('dragging');
+
+  touchDragState = {
+    srcIndex: index,
+    currentIndex: index,
+    offsetY: touch.clientY - rect.top,
+    ghost: ghost,
+    srcCard: card,
+    cards: cards
+  };
+
+  document.addEventListener('touchmove', onTouchDragMove, { passive: false });
+  document.addEventListener('touchend', onTouchDragEnd);
+}
+
+function onTouchDragMove(e) {
+  if (!touchDragState) return;
+  e.preventDefault();
+  const touch = e.touches[0];
+  touchDragState.ghost.style.top = (touch.clientY - touchDragState.offsetY) + 'px';
+
+  touchDragState.cards.forEach((c, i) => {
+    c.classList.remove('drag-over');
+    const r = c.getBoundingClientRect();
+    if (touch.clientY > r.top && touch.clientY < r.bottom && i !== touchDragState.srcIndex) {
+      c.classList.add('drag-over');
+      touchDragState.currentIndex = i;
+    }
+  });
+}
+
+function onTouchDragEnd() {
+  if (!touchDragState) return;
+  touchDragState.ghost.remove();
+  touchDragState.srcCard.classList.remove('dragging');
+  touchDragState.cards.forEach(c => c.classList.remove('drag-over'));
+
+  const src = touchDragState.srcIndex;
+  const dst = touchDragState.currentIndex;
+  if (src !== dst) {
+    const [moved] = slides.splice(src, 1);
+    slides.splice(dst, 0, moved);
+    saveDeckData();
+    render();
+  }
+
+  touchDragState = null;
+  document.removeEventListener('touchmove', onTouchDragMove);
+  document.removeEventListener('touchend', onTouchDragEnd);
 }
 
 // ── Deck management ──
@@ -640,7 +1047,7 @@ function renameDeck(id, el, ev) {
   const oldName = deck.name;
   let cancelled = false;
 
-  nameEl.innerHTML = `<input class="deck-rename-input" id="rename-${id}" value="${escapeHtml(oldName)}" />`;
+  nameEl.innerHTML = '<input class="deck-rename-input" id="rename-' + id + '" value="' + escapeHtml(oldName) + '" />';
   const inp = document.getElementById('rename-' + id);
   inp.focus();
   inp.select();
@@ -691,39 +1098,46 @@ function renderHome() {
     ? count + ' deck' + (count !== 1 ? 's' : '')
     : 'No decks yet';
 
+  list.innerHTML = '';
+
   if (!count) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">\ud83c\udfa4</div>
-        <div class="empty-state-text">No decks yet</div>
-        <div class="empty-state-hint">Create your first deck below</div>
-      </div>`;
-    return;
+    list.innerHTML =
+      '<div class="empty-state">' +
+        '<div class="empty-state-icon">\uD83C\uDFA4</div>' +
+        '<div class="empty-state-text">No decks yet</div>' +
+        '<div class="empty-state-hint">Create your first deck below</div>' +
+      '</div>';
+  } else {
+    decks.forEach(deck => {
+      const slideCount = deck.slides.length;
+      const totalMins = deck.slides.reduce((a, s) => a + (s.mins || 0), 0);
+      const doneCount = deck.slides.filter(s => s.done).length;
+      const card = document.createElement('div');
+      card.className = 'deck-card';
+      card.onclick = () => openDeck(deck.id);
+      card.innerHTML =
+        '<div class="deck-card-top">' +
+          '<span class="deck-card-name">' + escapeHtml(deck.name) + '</span>' +
+          '<div class="deck-card-actions">' +
+            '<button class="mini-btn blue" onclick="renameDeck(' + deck.id + ', this, event)">rename</button>' +
+            '<button class="mini-btn del" onclick="deleteDeck(' + deck.id + ', event)">\u2715</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="deck-card-meta">' +
+          '<span>' + slideCount + ' slide' + (slideCount !== 1 ? 's' : '') + (totalMins ? ' \u00B7 ' + totalMins + ' min' : '') + '</span>' +
+          (doneCount ? '<span>' + doneCount + '/' + slideCount + ' done</span>' : '') +
+          '<span>' + formatRelativeTime(deck.updatedAt) + '</span>' +
+        '</div>';
+      list.appendChild(card);
+    });
   }
 
-  list.innerHTML = '';
-  decks.forEach(deck => {
-    const slideCount = deck.slides.length;
-    const totalMins = deck.slides.reduce((a, s) => a + (s.mins || 0), 0);
-    const doneCount = deck.slides.filter(s => s.done).length;
-    const card = document.createElement('div');
-    card.className = 'deck-card';
-    card.onclick = () => openDeck(deck.id);
-    card.innerHTML = `
-      <div class="deck-card-top">
-        <span class="deck-card-name">${escapeHtml(deck.name)}</span>
-        <div class="deck-card-actions">
-          <button class="mini-btn blue" onclick="renameDeck(${deck.id}, this, event)">rename</button>
-          <button class="mini-btn del" onclick="deleteDeck(${deck.id}, event)">\u2715</button>
-        </div>
-      </div>
-      <div class="deck-card-meta">
-        <span>${slideCount} slide${slideCount !== 1 ? 's' : ''}${totalMins ? ' \u00b7 ' + totalMins + ' min' : ''}</span>
-        ${doneCount ? '<span>' + doneCount + '/' + slideCount + ' done</span>' : ''}
-        <span>${formatRelativeTime(deck.updatedAt)}</span>
-      </div>`;
-    list.appendChild(card);
-  });
+  // Sync section
+  const syncDiv = document.createElement('div');
+  syncDiv.className = 'sync-section';
+  syncDiv.id = 'syncSection';
+  list.appendChild(syncDiv);
+  renderSyncSection();
 }
 
 // ── Slide editor (largely unchanged) ──
@@ -746,7 +1160,7 @@ function render() {
   document.getElementById('progressFill').style.width = pct + '%';
   document.getElementById('progressText').textContent = done + ' / ' + total + ' done';
   document.getElementById('deck-label').textContent = total
-    ? total + ' slides \u00b7 ' + totalMins + ' min total'
+    ? total + ' slides \u00B7 ' + totalMins + ' min total'
     : 'No slides yet';
 
   list.innerHTML = '';
@@ -755,26 +1169,38 @@ function render() {
     card.className = 'slide-card' + (slide.done ? ' done-card' : '');
     const numClass = slide.done ? 'done' : '';
     const timingHtml = slide.mins
-      ? `<span class="timing-badge">${slide.mins} min</span>`
-      : `<span class="timing-badge no-time">no time set</span>`;
+      ? '<span class="timing-badge">' + slide.mins + ' min</span>'
+      : '<span class="timing-badge no-time">no time set</span>';
     const notesPreview = slide.notes
-      ? `<div class="notes-text">${escapeHtml(slide.notes)}</div>`
-      : `<div class="notes-text" style="color:var(--hint);font-style:italic">No notes. Tap edit to add.</div>`;
+      ? '<div class="notes-text">' + escapeHtml(slide.notes) + '</div>'
+      : '<div class="notes-text" style="color:var(--hint);font-style:italic">No notes. Tap edit to add.</div>';
 
-    card.innerHTML = `
-      <div class="slide-header" onclick="toggleNotes(${slide.id})">
-        <span class="slide-num ${numClass}">${String(i+1).padStart(2,'0')}</span>
-        <div class="slide-title-row">
-          <span class="slide-title-text">${escapeHtml(slide.title)}</span>
-          <div class="slide-timing-row">${timingHtml}</div>
-        </div>
-        <div class="slide-actions" onclick="event.stopPropagation()">
-          <button class="mini-btn ${slide.done?'done':''}" onclick="toggleDone(${slide.id})">${slide.done?'\u2713':'done'}</button>
-          <button class="mini-btn blue" onclick="editSlide(${slide.id})">edit</button>
-          <button class="mini-btn del" onclick="deleteSlide(${slide.id})">\u2715</button>
-        </div>
-      </div>
-      <div class="slide-notes" id="notes-${slide.id}">${notesPreview}</div>`;
+    card.innerHTML =
+      '<div class="slide-header" onclick="toggleNotes(' + slide.id + ')">' +
+        '<span class="drag-handle" onclick="event.stopPropagation()">\u22EE\u22EE</span>' +
+        '<span class="slide-num ' + numClass + '">' + String(i+1).padStart(2,'0') + '</span>' +
+        '<div class="slide-title-row">' +
+          '<span class="slide-title-text">' + escapeHtml(slide.title) + '</span>' +
+          '<div class="slide-timing-row">' + timingHtml + '</div>' +
+        '</div>' +
+        '<div class="slide-actions" onclick="event.stopPropagation()">' +
+          '<button class="mini-btn ' + (slide.done?'done':'') + '" onclick="toggleDone(' + slide.id + ')">' + (slide.done?'\u2713':'done') + '</button>' +
+          '<button class="mini-btn blue" onclick="editSlide(' + slide.id + ')">edit</button>' +
+          '<button class="mini-btn del" onclick="deleteSlide(' + slide.id + ')">\u2715</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="slide-notes" id="notes-' + slide.id + '">' + notesPreview + '</div>';
+
+    // Desktop drag-and-drop
+    const handle = card.querySelector('.drag-handle');
+    handle.addEventListener('mousedown', () => { card.draggable = true; });
+    card.addEventListener('dragstart', (e) => onDragStart(e, i));
+    card.addEventListener('dragover', (e) => onDragOver(e, i));
+    card.addEventListener('drop', (e) => onDrop(e, i));
+    card.addEventListener('dragend', onDragEnd);
+    // Touch drag-and-drop
+    handle.addEventListener('touchstart', (e) => initTouchDrag(e, i), { passive: false });
+
     list.appendChild(card);
   });
 }
@@ -794,18 +1220,18 @@ function editSlide(id) {
   const s = slides.find(s=>s.id===id); if(!s) return;
   const n = document.getElementById('notes-'+id);
   n.classList.add('open');
-  n.innerHTML = `
-    <input class="edit-title-input" id="et-${id}" value="${escapeHtml(s.title)}" />
-    <div class="timing-input-row">
-      <span class="timing-label">Allotted time:</span>
-      <input class="timing-input" id="em-${id}" type="number" min="0" value="${s.mins||''}" placeholder="\u2014" />
-      <span class="timing-label">min</span>
-    </div>
-    <textarea class="notes-textarea" id="en-${id}">${escapeHtml(s.notes)}</textarea>
-    <div class="edit-actions">
-      <button class="btn-cancel" onclick="render()">Cancel</button>
-      <button class="btn-save" onclick="saveEdit(${id})">Save</button>
-    </div>`;
+  n.innerHTML =
+    '<input class="edit-title-input" id="et-' + id + '" value="' + escapeHtml(s.title) + '" />' +
+    '<div class="timing-input-row">' +
+      '<span class="timing-label">Allotted time:</span>' +
+      '<input class="timing-input" id="em-' + id + '" type="number" min="0" value="' + (s.mins||'') + '" placeholder="\u2014" />' +
+      '<span class="timing-label">min</span>' +
+    '</div>' +
+    '<textarea class="notes-textarea" id="en-' + id + '">' + escapeHtml(s.notes) + '</textarea>' +
+    '<div class="edit-actions">' +
+      '<button class="btn-cancel" onclick="render()">Cancel</button>' +
+      '<button class="btn-save" onclick="saveEdit(' + id + ')">Save</button>' +
+    '</div>';
 }
 
 function saveEdit(id) {
@@ -851,7 +1277,7 @@ function renderTimerUI() {
     const remaining = allottedSec - slideSeconds;
     const sign = remaining < 0 ? '-' : '';
     document.getElementById('allotted-label').textContent =
-      s.mins + ' min allotted \u00b7 ' + sign + fmtTime(Math.abs(remaining)) + (remaining < 0 ? ' over' : ' left');
+      s.mins + ' min allotted \u00B7 ' + sign + fmtTime(Math.abs(remaining)) + (remaining < 0 ? ' over' : ' left');
   } else {
     document.getElementById('allotted-label').textContent = 'no time set for this slide';
   }
@@ -955,6 +1381,7 @@ loadAllDecks();
 updateTime();
 setInterval(updateTime, 15000);
 renderHome();
+initSupabase();
 </script>
 </body>
 </html>
