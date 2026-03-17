@@ -29,6 +29,8 @@
   --text: #1a1a18;
   --muted: #5f5e5a;
   --hint: #9a9991;
+  --danger: #c53030;
+  --danger-light: #fde8e8;
   --radius: 14px;
   --font-display: 'Fraunces', Georgia, serif;
   --font-mono: 'DM Mono', monospace;
@@ -52,6 +54,8 @@
     --success-dark: #97C459;
     --warn-light: #2e1f04;
     --warn-dark: #FAC775;
+    --danger: #fc8181;
+    --danger-light: #2d1515;
   }
 }
 
@@ -102,6 +106,17 @@ html, body {
 
 .nav-title { font-family: var(--font-display); font-size: 22px; font-weight: 500; color: var(--text); }
 .nav-subtitle { font-size: 12px; color: var(--hint); font-family: var(--font-mono); margin-top: 2px; }
+
+.nav-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.btn-back {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 0.5px solid var(--border-mid);
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
 
 .btn-icon {
   width: 38px; height: 38px; border-radius: 50%;
@@ -255,9 +270,56 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── Present view ── */
+/* ── Home / Deck list view ── */
+.app-home { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.app-home.hidden { display: none; }
+
+.deck-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 0.5px solid var(--border);
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.15s;
+}
+.deck-card:active { border-color: var(--accent); }
+
+.deck-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.deck-card-name {
+  font-family: var(--font-display); font-size: 17px; font-weight: 500;
+  color: var(--text); flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.deck-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+.deck-card-meta {
+  display: flex; gap: 10px; margin-top: 6px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--hint);
+}
+
+.deck-rename-input {
+  font-family: var(--font-display); font-size: 17px; font-weight: 500;
+  color: var(--text); background: var(--surface);
+  border: 0.5px solid var(--accent); border-radius: 8px;
+  padding: 2px 8px; outline: none; width: 100%;
+  -webkit-appearance: none;
+}
+
+.empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  padding: 40px 20px; text-align: center;
+}
+.empty-state-icon { font-size: 40px; opacity: 0.3; }
+.empty-state-text { font-size: 15px; color: var(--muted); }
+.empty-state-hint { font-size: 12px; color: var(--hint); font-family: var(--font-mono); }
+
+/* ── Normal / Slide editor view ── */
 .app-normal { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 .app-normal.hidden { display: none; }
+
+/* ── Present view ── */
 .present-view { display: none; flex-direction: column; flex: 1; overflow: hidden; }
 .present-view.active { display: flex; }
 
@@ -339,17 +401,43 @@ html, body {
 <body>
 <div class="app">
 
-  <!-- NORMAL VIEW -->
-  <div class="app-normal" id="appNormal">
+  <!-- HOME VIEW (Deck List) -->
+  <div class="app-home" id="appHome">
+    <div class="safe-top"></div>
+    <div class="status-bar">
+      <span id="time-display-home">09:41</span>
+      <span style="font-size:14px;letter-spacing:2px">···</span>
+    </div>
+    <div class="nav-bar">
+      <div>
+        <div class="nav-title">Speaker Notes</div>
+        <div class="nav-subtitle" id="home-label">No decks yet</div>
+      </div>
+    </div>
+    <div class="scroll-area" id="deckList"></div>
+    <div class="bottom-bar">
+      <div class="add-slide-row">
+        <input class="add-input" id="newDeckName" placeholder="New deck name…" />
+        <button class="btn-add" onclick="createDeck()">+</button>
+      </div>
+    </div>
+    <div class="safe-bottom"></div>
+  </div>
+
+  <!-- NORMAL VIEW (Slide Editor) -->
+  <div class="app-normal hidden" id="appNormal">
     <div class="safe-top"></div>
     <div class="status-bar">
       <span id="time-display">09:41</span>
       <span style="font-size:14px;letter-spacing:2px">···</span>
     </div>
     <div class="nav-bar">
-      <div>
-        <div class="nav-title">Speaker Notes</div>
-        <div class="nav-subtitle" id="deck-label">No slides yet</div>
+      <div class="nav-left">
+        <button class="btn-back" onclick="closeDeck()">←</button>
+        <div style="min-width:0">
+          <div class="nav-title" id="deck-name-title">Deck</div>
+          <div class="nav-subtitle" id="deck-label">No slides yet</div>
+        </div>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn-icon accent" onclick="startPresenting()">▶</button>
@@ -411,10 +499,19 @@ html, body {
 </div>
 
 <script>
-const STORAGE_KEY = 'speakernotes_v1';
+const STORAGE_KEY_V1 = 'speakernotes_v1';
+const STORAGE_KEY = 'speakernotes_v2';
 
+// ── Multi-deck state ──
+let decks = [];
+let nextDeckId = 1;
+let currentDeckId = null;
+
+// ── Active deck state (loaded from deck object) ──
 let slides = [];
 let nextId = 1;
+
+// ── Present mode state ──
 let presentIndex = 0;
 let timerRunning = false;
 let totalSeconds = 0;
@@ -422,35 +519,316 @@ let slideSeconds = 0;
 let slideStartAt = 0;
 let timerInterval = null;
 
-function loadData() {
+// ── Data layer ──
+
+function loadAllDecks() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const d = JSON.parse(raw);
-      slides = d.slides || [];
-      nextId = d.nextId || (slides.length + 1);
+      decks = d.decks || [];
+      nextDeckId = d.nextDeckId || (decks.length + 1);
       return;
     }
   } catch(e) {}
-  // Default sample deck
-  slides = [
-    { id:1, title:"Opening & Agenda",   notes:"Welcome the audience. Briefly outline the three key topics. Keep this under 2 minutes — energy sets the tone.", mins:2,  done:false },
-    { id:2, title:"Problem Statement",  notes:"Anchor the pain point before anything else. Use the operational cost slide to create urgency. Pause after the headline stat.", mins:5,  done:false },
-    { id:3, title:"Our Approach",       notes:"Three-engine model: Design, Ops, Quality. These aren\u2019t silos \u2014 they feed each other. Draw the loop on the whiteboard if in-person.", mins:10, done:false },
-    { id:4, title:"Roadmap 2025\u201326",    notes:"Keep it high-level. Q1: foundations. Q2: pilots. H2: scale. Avoid getting dragged into specifics \u2014 use the parking lot.", mins:8,  done:false },
-    { id:5, title:"Q&A & Next Steps",   notes:"Summarize the three asks: budget approval, pilot team nomination, sponsor meeting before April. Leave at least 10 minutes.", mins:10, done:false }
-  ];
-  nextId = 6;
+
+  // Migration from v1
+  try {
+    const rawV1 = localStorage.getItem(STORAGE_KEY_V1);
+    if (rawV1) {
+      const d = JSON.parse(rawV1);
+      const now = new Date().toISOString();
+      decks = [{
+        id: 1,
+        name: 'My Presentation',
+        slides: d.slides || [],
+        nextSlideId: d.nextId || ((d.slides || []).length + 1),
+        createdAt: now,
+        updatedAt: now
+      }];
+      nextDeckId = 2;
+      saveAllDecks();
+      localStorage.removeItem(STORAGE_KEY_V1);
+      return;
+    }
+  } catch(e) {}
+
+  // Default: start with a sample deck
+  const now = new Date().toISOString();
+  decks = [{
+    id: 1,
+    name: 'Example Presentation',
+    slides: [
+      { id:1, title:"Opening & Agenda",   notes:"Welcome the audience. Briefly outline the three key topics. Keep this under 2 minutes \u2014 energy sets the tone.", mins:2,  done:false },
+      { id:2, title:"Problem Statement",  notes:"Anchor the pain point before anything else. Use the operational cost slide to create urgency. Pause after the headline stat.", mins:5,  done:false },
+      { id:3, title:"Our Approach",       notes:"Three-engine model: Design, Ops, Quality. These aren\u2019t silos \u2014 they feed each other. Draw the loop on the whiteboard if in-person.", mins:10, done:false },
+      { id:4, title:"Roadmap 2025\u201326",    notes:"Keep it high-level. Q1: foundations. Q2: pilots. H2: scale. Avoid getting dragged into specifics \u2014 use the parking lot.", mins:8,  done:false },
+      { id:5, title:"Q&A & Next Steps",   notes:"Summarize the three asks: budget approval, pilot team nomination, sponsor meeting before April. Leave at least 10 minutes.", mins:10, done:false }
+    ],
+    nextSlideId: 6,
+    createdAt: now,
+    updatedAt: now
+  }];
+  nextDeckId = 2;
+  saveAllDecks();
 }
 
-function saveData() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ slides, nextId })); } catch(e) {}
+function saveAllDecks() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ decks, nextDeckId }));
+  } catch(e) {}
+}
+
+function saveDeckData() {
+  if (currentDeckId === null) return;
+  const deck = decks.find(d => d.id === currentDeckId);
+  if (!deck) return;
+  deck.slides = slides;
+  deck.nextSlideId = nextId;
+  deck.updatedAt = new Date().toISOString();
+  saveAllDecks();
+}
+
+// ── Deck management ──
+
+function createDeck() {
+  const input = document.getElementById('newDeckName');
+  const name = input.value.trim();
+  if (!name) return;
+  const now = new Date().toISOString();
+  decks.push({
+    id: nextDeckId++,
+    name,
+    slides: [],
+    nextSlideId: 1,
+    createdAt: now,
+    updatedAt: now
+  });
+  input.value = '';
+  saveAllDecks();
+  renderHome();
+}
+
+function openDeck(id) {
+  const deck = decks.find(d => d.id === id);
+  if (!deck) return;
+  currentDeckId = id;
+  slides = deck.slides;
+  nextId = deck.nextSlideId;
+  document.getElementById('appHome').classList.add('hidden');
+  document.getElementById('appNormal').classList.remove('hidden');
+  document.getElementById('deck-name-title').textContent = deck.name;
+  render();
+}
+
+function closeDeck() {
+  saveDeckData();
+  currentDeckId = null;
+  slides = [];
+  nextId = 1;
+  document.getElementById('appNormal').classList.add('hidden');
+  document.getElementById('appHome').classList.remove('hidden');
+  renderHome();
+}
+
+function renameDeck(id, el, ev) {
+  ev.stopPropagation();
+  const deck = decks.find(d => d.id === id);
+  if (!deck) return;
+  const cardEl = el.closest('.deck-card');
+  const nameEl = cardEl.querySelector('.deck-card-name');
+  const oldName = deck.name;
+  let cancelled = false;
+
+  nameEl.innerHTML = `<input class="deck-rename-input" id="rename-${id}" value="${escapeHtml(oldName)}" />`;
+  const inp = document.getElementById('rename-' + id);
+  inp.focus();
+  inp.select();
+
+  function finish() {
+    if (cancelled) { renderHome(); return; }
+    const newName = inp.value.trim() || oldName;
+    deck.name = newName;
+    deck.updatedAt = new Date().toISOString();
+    saveAllDecks();
+    renderHome();
+  }
+
+  inp.addEventListener('blur', finish);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') inp.blur();
+    if (e.key === 'Escape') { cancelled = true; inp.blur(); }
+  });
+}
+
+function deleteDeck(id, ev) {
+  ev.stopPropagation();
+  const deck = decks.find(d => d.id === id);
+  if (!deck) return;
+  if (!confirm('Delete "' + deck.name + '"? This cannot be undone.')) return;
+  decks = decks.filter(d => d.id !== id);
+  saveAllDecks();
+  renderHome();
+}
+
+function formatRelativeTime(isoStr) {
+  if (!isoStr) return '';
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return days + 'd ago';
+  return new Date(isoStr).toLocaleDateString();
+}
+
+function renderHome() {
+  const list = document.getElementById('deckList');
+  const count = decks.length;
+  document.getElementById('home-label').textContent = count
+    ? count + ' deck' + (count !== 1 ? 's' : '')
+    : 'No decks yet';
+
+  if (!count) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">\ud83c\udfa4</div>
+        <div class="empty-state-text">No decks yet</div>
+        <div class="empty-state-hint">Create your first deck below</div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  decks.forEach(deck => {
+    const slideCount = deck.slides.length;
+    const totalMins = deck.slides.reduce((a, s) => a + (s.mins || 0), 0);
+    const doneCount = deck.slides.filter(s => s.done).length;
+    const card = document.createElement('div');
+    card.className = 'deck-card';
+    card.onclick = () => openDeck(deck.id);
+    card.innerHTML = `
+      <div class="deck-card-top">
+        <span class="deck-card-name">${escapeHtml(deck.name)}</span>
+        <div class="deck-card-actions">
+          <button class="mini-btn blue" onclick="renameDeck(${deck.id}, this, event)">rename</button>
+          <button class="mini-btn del" onclick="deleteDeck(${deck.id}, event)">\u2715</button>
+        </div>
+      </div>
+      <div class="deck-card-meta">
+        <span>${slideCount} slide${slideCount !== 1 ? 's' : ''}${totalMins ? ' \u00b7 ' + totalMins + ' min' : ''}</span>
+        ${doneCount ? '<span>' + doneCount + '/' + slideCount + ' done</span>' : ''}
+        <span>${formatRelativeTime(deck.updatedAt)}</span>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+// ── Slide editor (largely unchanged) ──
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function fmtTime(s) {
   const m = Math.floor(s/60), sec = s%60;
   return m + ':' + String(sec).padStart(2,'0');
 }
+
+function render() {
+  const list = document.getElementById('slideList');
+  const done = slides.filter(s => s.done).length;
+  const total = slides.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  const totalMins = slides.reduce((a,s) => a + (s.mins||0), 0);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = done + ' / ' + total + ' done';
+  document.getElementById('deck-label').textContent = total
+    ? total + ' slides \u00b7 ' + totalMins + ' min total'
+    : 'No slides yet';
+
+  list.innerHTML = '';
+  slides.forEach((slide, i) => {
+    const card = document.createElement('div');
+    card.className = 'slide-card' + (slide.done ? ' done-card' : '');
+    const numClass = slide.done ? 'done' : '';
+    const timingHtml = slide.mins
+      ? `<span class="timing-badge">${slide.mins} min</span>`
+      : `<span class="timing-badge no-time">no time set</span>`;
+    const notesPreview = slide.notes
+      ? `<div class="notes-text">${escapeHtml(slide.notes)}</div>`
+      : `<div class="notes-text" style="color:var(--hint);font-style:italic">No notes. Tap edit to add.</div>`;
+
+    card.innerHTML = `
+      <div class="slide-header" onclick="toggleNotes(${slide.id})">
+        <span class="slide-num ${numClass}">${String(i+1).padStart(2,'0')}</span>
+        <div class="slide-title-row">
+          <span class="slide-title-text">${escapeHtml(slide.title)}</span>
+          <div class="slide-timing-row">${timingHtml}</div>
+        </div>
+        <div class="slide-actions" onclick="event.stopPropagation()">
+          <button class="mini-btn ${slide.done?'done':''}" onclick="toggleDone(${slide.id})">${slide.done?'\u2713':'done'}</button>
+          <button class="mini-btn blue" onclick="editSlide(${slide.id})">edit</button>
+          <button class="mini-btn del" onclick="deleteSlide(${slide.id})">\u2715</button>
+        </div>
+      </div>
+      <div class="slide-notes" id="notes-${slide.id}">${notesPreview}</div>`;
+    list.appendChild(card);
+  });
+}
+
+function toggleNotes(id) {
+  document.getElementById('notes-'+id).classList.toggle('open');
+}
+function toggleDone(id) {
+  const s = slides.find(s=>s.id===id); if(s) s.done=!s.done; saveDeckData(); render();
+}
+function deleteSlide(id) {
+  if (!confirm('Delete this slide?')) return;
+  slides = slides.filter(s=>s.id!==id); saveDeckData(); render();
+}
+
+function editSlide(id) {
+  const s = slides.find(s=>s.id===id); if(!s) return;
+  const n = document.getElementById('notes-'+id);
+  n.classList.add('open');
+  n.innerHTML = `
+    <input class="edit-title-input" id="et-${id}" value="${escapeHtml(s.title)}" />
+    <div class="timing-input-row">
+      <span class="timing-label">Allotted time:</span>
+      <input class="timing-input" id="em-${id}" type="number" min="0" value="${s.mins||''}" placeholder="\u2014" />
+      <span class="timing-label">min</span>
+    </div>
+    <textarea class="notes-textarea" id="en-${id}">${escapeHtml(s.notes)}</textarea>
+    <div class="edit-actions">
+      <button class="btn-cancel" onclick="render()">Cancel</button>
+      <button class="btn-save" onclick="saveEdit(${id})">Save</button>
+    </div>`;
+}
+
+function saveEdit(id) {
+  const s = slides.find(s=>s.id===id); if(!s) return;
+  s.title = document.getElementById('et-'+id).value.trim() || s.title;
+  s.notes = document.getElementById('en-'+id).value;
+  const mv = parseInt(document.getElementById('em-'+id).value);
+  s.mins = isNaN(mv) ? 0 : Math.max(0,mv);
+  saveDeckData(); render();
+  setTimeout(() => { const n = document.getElementById('notes-'+id); if(n) n.classList.add('open'); }, 50);
+}
+
+function addSlide() {
+  const title = document.getElementById('newSlideTitle').value.trim();
+  if (!title) return;
+  const mv = parseInt(document.getElementById('newSlideMins').value);
+  slides.push({ id: nextId++, title, notes:'', mins: isNaN(mv)?0:Math.max(0,mv), done:false });
+  document.getElementById('newSlideTitle').value = '';
+  document.getElementById('newSlideMins').value = '';
+  saveDeckData(); render();
+}
+
+// ── Present mode ──
 
 function updateClock() {
   if (!timerRunning) return;
@@ -503,109 +881,6 @@ function resetTimer() {
   renderTimerUI();
 }
 
-function updateTime() {
-  const d = new Date();
-  const el = document.getElementById('time-display');
-  if (el) el.textContent = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-}
-
-function render() {
-  const list = document.getElementById('slideList');
-  const done = slides.filter(s => s.done).length;
-  const total = slides.length;
-  const pct = total ? Math.round(done/total*100) : 0;
-  const totalMins = slides.reduce((a,s) => a + (s.mins||0), 0);
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressText').textContent = done + ' / ' + total + ' done';
-  document.getElementById('deck-label').textContent = total
-    ? total + ' slides \u00b7 ' + totalMins + ' min total'
-    : 'No slides yet';
-
-  list.innerHTML = '';
-  slides.forEach((slide, i) => {
-    const card = document.createElement('div');
-    card.className = 'slide-card' + (slide.done ? ' done-card' : '');
-    const numClass = slide.done ? 'done' : '';
-    const timingHtml = slide.mins
-      ? `<span class="timing-badge">${slide.mins} min</span>`
-      : `<span class="timing-badge no-time">no time set</span>`;
-    const notesPreview = slide.notes
-      ? `<div class="notes-text">${slide.notes}</div>`
-      : `<div class="notes-text" style="color:var(--hint);font-style:italic">No notes. Tap edit to add.</div>`;
-
-    card.innerHTML = `
-      <div class="slide-header" onclick="toggleNotes(${slide.id})">
-        <span class="slide-num ${numClass}">${String(i+1).padStart(2,'0')}</span>
-        <div class="slide-title-row">
-          <span class="slide-title-text">${escapeHtml(slide.title)}</span>
-          <div class="slide-timing-row">${timingHtml}</div>
-        </div>
-        <div class="slide-actions" onclick="event.stopPropagation()">
-          <button class="mini-btn ${slide.done?'done':''}" onclick="toggleDone(${slide.id})">${slide.done?'\u2713':'done'}</button>
-          <button class="mini-btn blue" onclick="editSlide(${slide.id})">edit</button>
-          <button class="mini-btn del" onclick="deleteSlide(${slide.id})">\u2715</button>
-        </div>
-      </div>
-      <div class="slide-notes" id="notes-${slide.id}">${notesPreview}</div>`;
-    list.appendChild(card);
-  });
-}
-
-function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function toggleNotes(id) {
-  document.getElementById('notes-'+id).classList.toggle('open');
-}
-function toggleDone(id) {
-  const s = slides.find(s=>s.id===id); if(s) s.done=!s.done; saveData(); render();
-}
-function deleteSlide(id) {
-  if (!confirm('Delete this slide?')) return;
-  slides = slides.filter(s=>s.id!==id); saveData(); render();
-}
-
-function editSlide(id) {
-  const s = slides.find(s=>s.id===id); if(!s) return;
-  const n = document.getElementById('notes-'+id);
-  n.classList.add('open');
-  n.innerHTML = `
-    <input class="edit-title-input" id="et-${id}" value="${escapeHtml(s.title)}" />
-    <div class="timing-input-row">
-      <span class="timing-label">Allotted time:</span>
-      <input class="timing-input" id="em-${id}" type="number" min="0" value="${s.mins||''}" placeholder="\u2014" />
-      <span class="timing-label">min</span>
-    </div>
-    <textarea class="notes-textarea" id="en-${id}">${escapeHtml(s.notes)}</textarea>
-    <div class="edit-actions">
-      <button class="btn-cancel" onclick="render()">Cancel</button>
-      <button class="btn-save" onclick="saveEdit(${id})">Save</button>
-    </div>`;
-}
-
-function saveEdit(id) {
-  const s = slides.find(s=>s.id===id); if(!s) return;
-  s.title = document.getElementById('et-'+id).value.trim() || s.title;
-  s.notes = document.getElementById('en-'+id).value;
-  const mv = parseInt(document.getElementById('em-'+id).value);
-  s.mins = isNaN(mv) ? 0 : Math.max(0,mv);
-  saveData(); render();
-  setTimeout(() => { const n = document.getElementById('notes-'+id); if(n) n.classList.add('open'); }, 50);
-}
-
-function addSlide() {
-  const title = document.getElementById('newSlideTitle').value.trim();
-  if (!title) return;
-  const mv = parseInt(document.getElementById('newSlideMins').value);
-  slides.push({ id: nextId++, title, notes:'', mins: isNaN(mv)?0:Math.max(0,mv), done:false });
-  document.getElementById('newSlideTitle').value = '';
-  document.getElementById('newSlideMins').value = '';
-  saveData(); render();
-}
-
-document.getElementById('newSlideTitle').addEventListener('keydown', e => { if(e.key==='Enter') addSlide(); });
-
 function startPresenting() {
   if (!slides.length) return;
   presentIndex = 0; slideStartAt = 0; slideSeconds = 0;
@@ -647,7 +922,7 @@ function presentNext() {
   if (presentIndex<slides.length-1) { presentIndex++; slideStartAt=totalSeconds; slideSeconds=0; updatePresentView(); }
 }
 function markCurrentDone() {
-  slides[presentIndex].done = !slides[presentIndex].done; saveData(); updatePresentView();
+  slides[presentIndex].done = !slides[presentIndex].done; saveDeckData(); updatePresentView();
 }
 
 // Swipe navigation in present mode
@@ -658,11 +933,28 @@ document.getElementById('presentView').addEventListener('touchend', e => {
   if (Math.abs(dx) > 50) { dx < 0 ? presentNext() : presentPrev(); }
 }, { passive: true });
 
-// Init
-loadData();
+// ── Clock ──
+
+function updateTime() {
+  const d = new Date();
+  const t = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  const el1 = document.getElementById('time-display-home');
+  const el2 = document.getElementById('time-display');
+  if (el1) el1.textContent = t;
+  if (el2) el2.textContent = t;
+}
+
+// ── Keyboard shortcuts ──
+
+document.getElementById('newDeckName').addEventListener('keydown', e => { if(e.key==='Enter') createDeck(); });
+document.getElementById('newSlideTitle').addEventListener('keydown', e => { if(e.key==='Enter') addSlide(); });
+
+// ── Init ──
+
+loadAllDecks();
 updateTime();
 setInterval(updateTime, 15000);
-render();
+renderHome();
 </script>
 </body>
 </html>
