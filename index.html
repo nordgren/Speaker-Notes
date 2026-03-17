@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Speaker Notes" />
+<meta name="theme-color" content="#042C53" />
+<title>Speaker Notes</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,300&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent: #185FA5;
+  --accent-light: #E6F1FB;
+  --accent-text: #0C447C;
+  --warn-light: #FAEEDA;
+  --warn-dark: #633806;
+  --success: #639922;
+  --success-light: #EAF3DE;
+  --success-dark: #3B6D11;
+  --card-bg: #ffffff;
+  --surface: #f5f4f0;
+  --border: rgba(0,0,0,0.10);
+  --border-mid: rgba(0,0,0,0.18);
+  --text: #1a1a18;
+  --muted: #5f5e5a;
+  --hint: #9a9991;
+  --radius: 14px;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-mono: 'DM Mono', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --card-bg: #1c1c1e;
+    --surface: #111110;
+    --border: rgba(255,255,255,0.10);
+    --border-mid: rgba(255,255,255,0.18);
+    --text: #f0ede6;
+    --muted: #9a9991;
+    --hint: #5f5e5a;
+    --accent-light: #0c2c4a;
+    --accent-text: #85B7EB;
+    --success-light: #1a2f0d;
+    --success-dark: #97C459;
+    --warn-light: #2e1f04;
+    --warn-dark: #FAC775;
+  }
+}
+
+html, body {
+  height: 100%;
+  background: var(--surface);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+.app {
+  max-width: 430px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Status bar spacer for notch */
+.safe-top { height: var(--safe-top); background: var(--card-bg); flex-shrink: 0; }
+.safe-bottom { height: var(--safe-bottom); background: var(--card-bg); flex-shrink: 0; }
+
+.status-bar {
+  padding: 10px 20px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--card-bg);
+  flex-shrink: 0;
+}
+
+.nav-bar {
+  background: var(--card-bg);
+  padding: 6px 20px 12px;
+  border-bottom: 0.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.nav-title { font-family: var(--font-display); font-size: 22px; font-weight: 500; color: var(--text); }
+.nav-subtitle { font-size: 12px; color: var(--hint); font-family: var(--font-mono); margin-top: 2px; }
+
+.btn-icon {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 0.5px solid var(--border-mid);
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-icon.accent { background: var(--accent); color: white; border-color: var(--accent); }
+
+.progress-strip {
+  padding: 8px 16px 4px;
+  display: flex; gap: 10px; align-items: center;
+  background: var(--card-bg);
+  flex-shrink: 0;
+  border-bottom: 0.5px solid var(--border);
+}
+.progress-bar-wrap { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+.progress-label { font-size: 11px; color: var(--hint); font-family: var(--font-mono); white-space: nowrap; }
+
+.scroll-area {
+  flex: 1; overflow-y: auto; padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.slide-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 0.5px solid var(--border);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.slide-card.done-card { border-color: #C0DD97; }
+
+.slide-header {
+  display: flex; align-items: center;
+  padding: 11px 12px 9px; gap: 9px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.slide-num {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  color: var(--accent-text); background: var(--accent-light);
+  border-radius: 6px; padding: 2px 7px; min-width: 28px;
+  text-align: center; flex-shrink: 0;
+}
+.slide-num.done { background: var(--success-light); color: var(--success-dark); }
+
+.slide-title-row { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.slide-title-text { font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slide-timing-row { display: flex; align-items: center; gap: 5px; }
+
+.timing-badge {
+  font-family: var(--font-mono); font-size: 10px;
+  padding: 1px 6px; border-radius: 5px;
+  border: 0.5px solid var(--border-mid);
+  color: var(--muted); background: var(--surface);
+  white-space: nowrap;
+}
+.timing-badge.no-time { font-style: italic; opacity: 0.5; }
+
+.slide-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.mini-btn {
+  padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 500;
+  border: 0.5px solid var(--border-mid); background: transparent;
+  cursor: pointer; color: var(--muted); font-family: var(--font-mono);
+  -webkit-tap-highlight-color: transparent;
+}
+.mini-btn.done { color: var(--success-dark); border-color: #C0DD97; background: var(--success-light); }
+.mini-btn.blue { color: var(--accent-text); border-color: rgba(24,95,165,0.3); background: var(--accent-light); }
+.mini-btn.del { color: var(--hint); }
+
+.slide-notes { padding: 0 12px 12px; display: none; }
+.slide-notes.open { display: block; }
+.notes-text { font-size: 13px; color: var(--muted); line-height: 1.65; white-space: pre-wrap; }
+
+.notes-textarea {
+  width: 100%; font-size: 13px; color: var(--text); line-height: 1.65;
+  background: var(--surface); border: 0.5px solid var(--border-mid);
+  border-radius: 9px; padding: 10px 12px; resize: vertical; min-height: 72px;
+  font-family: var(--font-sans); outline: none;
+  -webkit-appearance: none;
+}
+.notes-textarea:focus { border-color: var(--accent); }
+
+.timing-input-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.timing-label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.timing-input {
+  width: 56px; font-size: 13px; padding: 6px 8px;
+  border: 0.5px solid var(--border-mid); border-radius: 8px;
+  background: var(--surface); color: var(--text); outline: none;
+  font-family: var(--font-mono); text-align: center;
+  -webkit-appearance: none;
+}
+.timing-input:focus { border-color: var(--accent); }
+
+.edit-title-input {
+  width: 100%; font-size: 14px; padding: 8px 10px;
+  border: 0.5px solid var(--border-mid); border-radius: 9px;
+  background: var(--surface); color: var(--text); outline: none;
+  font-family: var(--font-sans); margin-bottom: 8px;
+  -webkit-appearance: none;
+}
+.edit-title-input:focus { border-color: var(--accent); }
+
+.edit-actions { display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end; }
+.btn-save {
+  padding: 7px 14px; background: var(--accent); color: white;
+  border: none; border-radius: 9px; font-size: 12px; font-weight: 500;
+  cursor: pointer; font-family: var(--font-mono);
+}
+.btn-cancel {
+  padding: 7px 14px; background: transparent; color: var(--muted);
+  border: 0.5px solid var(--border-mid); border-radius: 9px;
+  font-size: 12px; cursor: pointer; font-family: var(--font-mono);
+}
+
+.bottom-bar {
+  background: var(--card-bg); border-top: 0.5px solid var(--border);
+  padding: 12px 14px 14px;
+  display: flex; flex-direction: column; gap: 0;
+  flex-shrink: 0;
+}
+.add-slide-row { display: flex; gap: 6px; align-items: center; }
+.add-input {
+  flex: 1; font-size: 14px; padding: 9px 12px;
+  border: 0.5px solid var(--border-mid); border-radius: 11px;
+  background: var(--surface); color: var(--text); outline: none;
+  font-family: var(--font-sans);
+  -webkit-appearance: none;
+}
+.add-input:focus { border-color: var(--accent); }
+.add-input::placeholder { color: var(--hint); }
+.add-timing-input {
+  width: 52px; font-size: 13px; padding: 9px 6px;
+  border: 0.5px solid var(--border-mid); border-radius: 11px;
+  background: var(--surface); color: var(--text); outline: none;
+  font-family: var(--font-mono); text-align: center;
+  -webkit-appearance: none;
+}
+.add-timing-input:focus { border-color: var(--accent); }
+.add-timing-input::placeholder { color: var(--hint); font-size: 11px; }
+.add-timing-label { font-size: 11px; color: var(--hint); font-family: var(--font-mono); }
+.btn-add {
+  padding: 9px 14px; background: var(--accent); color: white;
+  border: none; border-radius: 11px; font-size: 15px; font-weight: 500;
+  cursor: pointer; font-family: var(--font-mono);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Present view ── */
+.app-normal { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.app-normal.hidden { display: none; }
+.present-view { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+.present-view.active { display: flex; }
+
+.present-safe-top { height: var(--safe-top); background: #031826; flex-shrink: 0; }
+
+.present-header {
+  background: #042C53; color: white;
+  padding: 10px 16px 10px; display: flex;
+  align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.present-header-info { font-family: var(--font-mono); font-size: 11px; color: #85B7EB; }
+.present-header-title { font-family: var(--font-display); font-size: 17px; color: white; font-weight: 300; margin-top: 2px; }
+.present-exit {
+  font-size: 11px; color: #85B7EB; background: transparent;
+  border: 0.5px solid #378ADD; border-radius: 8px; padding: 6px 12px;
+  cursor: pointer; font-family: var(--font-mono);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.timer-strip {
+  background: #031826; padding: 10px 16px 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.clock-big { font-family: var(--font-mono); font-size: 32px; font-weight: 500; color: white; letter-spacing: 3px; }
+.clock-big.warn { color: #FAC775; }
+.clock-big.over { color: #F7C1C1; }
+.timer-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: 1; margin: 0 12px; }
+.timer-allotted { font-family: var(--font-mono); font-size: 10px; color: #85B7EB; text-align: right; }
+.timer-slide-time { font-family: var(--font-mono); font-size: 10px; color: #378ADD; }
+.timer-controls { display: flex; gap: 6px; align-items: center; }
+.timer-btn {
+  padding: 5px 11px; font-size: 11px; font-family: var(--font-mono);
+  border-radius: 7px; cursor: pointer; border: 0.5px solid #378ADD;
+  background: transparent; color: #85B7EB;
+  -webkit-tap-highlight-color: transparent;
+}
+.timer-btn.running { border-color: #FAC775; color: #FAC775; }
+
+.present-notes-area {
+  flex: 1; padding: 20px 18px; overflow-y: auto; background: var(--card-bg);
+  -webkit-overflow-scrolling: touch;
+}
+.present-notes-big {
+  font-size: 20px; line-height: 1.75; color: var(--text);
+  font-family: var(--font-display); font-weight: 300; white-space: pre-wrap;
+}
+
+.present-nav {
+  background: var(--card-bg); border-top: 0.5px solid var(--border);
+  padding: 12px 16px 16px; display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.nav-arrow {
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 0.5px solid var(--border-mid); background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 19px; color: var(--text); flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-arrow:disabled { opacity: 0.3; cursor: default; }
+.nav-arrow.accent { background: var(--accent); color: white; border-color: var(--accent); }
+.present-prog { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.present-prog-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.present-prog-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+.present-prog-label { font-size: 10px; color: var(--hint); font-family: var(--font-mono); display: flex; justify-content: space-between; }
+.done-btn {
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 0.5px solid #C0DD97; background: var(--success-light);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 17px; color: var(--success-dark); flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.present-safe-bottom { height: var(--safe-bottom); background: var(--card-bg); flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- NORMAL VIEW -->
+  <div class="app-normal" id="appNormal">
+    <div class="safe-top"></div>
+    <div class="status-bar">
+      <span id="time-display">09:41</span>
+      <span style="font-size:14px;letter-spacing:2px">···</span>
+    </div>
+    <div class="nav-bar">
+      <div>
+        <div class="nav-title">Speaker Notes</div>
+        <div class="nav-subtitle" id="deck-label">No slides yet</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-icon accent" onclick="startPresenting()">▶</button>
+      </div>
+    </div>
+    <div class="progress-strip">
+      <div class="progress-bar-wrap"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <span class="progress-label" id="progressText">0 / 0 done</span>
+    </div>
+    <div class="scroll-area" id="slideList"></div>
+    <div class="bottom-bar">
+      <div class="add-slide-row">
+        <input class="add-input" id="newSlideTitle" placeholder="Add slide title…" />
+        <input class="add-timing-input" id="newSlideMins" type="number" min="0" placeholder="min" />
+        <button class="btn-add" onclick="addSlide()">+</button>
+      </div>
+    </div>
+    <div class="safe-bottom"></div>
+  </div>
+
+  <!-- PRESENT VIEW -->
+  <div class="present-view" id="presentView">
+    <div class="present-safe-top"></div>
+    <div class="present-header">
+      <div>
+        <div class="present-header-info" id="present-slide-counter">Slide 1 of 1</div>
+        <div class="present-header-title" id="present-slide-title">—</div>
+      </div>
+      <button class="present-exit" onclick="exitPresenting()">Exit</button>
+    </div>
+    <div class="timer-strip">
+      <div>
+        <div class="clock-big" id="clock-total">00:00</div>
+        <div class="timer-slide-time" id="slide-elapsed-label">this slide: 0:00</div>
+      </div>
+      <div class="timer-meta">
+        <div class="timer-allotted" id="allotted-label">no time set</div>
+      </div>
+      <div class="timer-controls">
+        <button class="timer-btn" id="timerToggle" onclick="toggleTimer()">Start</button>
+        <button class="timer-btn" onclick="resetTimer()">↺</button>
+      </div>
+    </div>
+    <div class="present-notes-area">
+      <div class="present-notes-big" id="present-notes-content">No notes.</div>
+    </div>
+    <div class="present-nav">
+      <button class="nav-arrow" id="btn-prev" onclick="presentPrev()">←</button>
+      <div class="present-prog">
+        <div class="present-prog-bar"><div class="present-prog-fill" id="presentProgFill" style="width:0%"></div></div>
+        <div class="present-prog-label"><span id="prog-pct">0% done</span><span id="prog-done">0 done</span></div>
+      </div>
+      <button class="done-btn" onclick="markCurrentDone()">✓</button>
+      <button class="nav-arrow accent" id="btn-next" onclick="presentNext()">→</button>
+    </div>
+    <div class="present-safe-bottom"></div>
+  </div>
+
+</div>
+
+<script>
+const STORAGE_KEY = 'speakernotes_v1';
+
+let slides = [];
+let nextId = 1;
+let presentIndex = 0;
+let timerRunning = false;
+let totalSeconds = 0;
+let slideSeconds = 0;
+let slideStartAt = 0;
+let timerInterval = null;
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      slides = d.slides || [];
+      nextId = d.nextId || (slides.length + 1);
+      return;
+    }
+  } catch(e) {}
+  // Default sample deck
+  slides = [
+    { id:1, title:"Opening & Agenda",   notes:"Welcome the audience. Briefly outline the three key topics. Keep this under 2 minutes — energy sets the tone.", mins:2,  done:false },
+    { id:2, title:"Problem Statement",  notes:"Anchor the pain point before anything else. Use the operational cost slide to create urgency. Pause after the headline stat.", mins:5,  done:false },
+    { id:3, title:"Our Approach",       notes:"Three-engine model: Design, Ops, Quality. These aren\u2019t silos \u2014 they feed each other. Draw the loop on the whiteboard if in-person.", mins:10, done:false },
+    { id:4, title:"Roadmap 2025\u201326",    notes:"Keep it high-level. Q1: foundations. Q2: pilots. H2: scale. Avoid getting dragged into specifics \u2014 use the parking lot.", mins:8,  done:false },
+    { id:5, title:"Q&A & Next Steps",   notes:"Summarize the three asks: budget approval, pilot team nomination, sponsor meeting before April. Leave at least 10 minutes.", mins:10, done:false }
+  ];
+  nextId = 6;
+}
+
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ slides, nextId })); } catch(e) {}
+}
+
+function fmtTime(s) {
+  const m = Math.floor(s/60), sec = s%60;
+  return m + ':' + String(sec).padStart(2,'0');
+}
+
+function updateClock() {
+  if (!timerRunning) return;
+  totalSeconds++;
+  slideSeconds = totalSeconds - slideStartAt;
+  renderTimerUI();
+}
+
+function renderTimerUI() {
+  const s = slides[presentIndex];
+  const allottedSec = s && s.mins ? s.mins * 60 : 0;
+  const clockEl = document.getElementById('clock-total');
+  const m = Math.floor(totalSeconds/60), sec = totalSeconds%60;
+  clockEl.textContent = String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+  clockEl.className = 'clock-big';
+  if (allottedSec && slideSeconds > allottedSec) clockEl.className = 'clock-big over';
+  else if (allottedSec && slideSeconds > allottedSec * 0.8) clockEl.className = 'clock-big warn';
+  document.getElementById('slide-elapsed-label').textContent = 'this slide: ' + fmtTime(slideSeconds);
+  if (s && s.mins) {
+    const remaining = allottedSec - slideSeconds;
+    const sign = remaining < 0 ? '-' : '';
+    document.getElementById('allotted-label').textContent =
+      s.mins + ' min allotted \u00b7 ' + sign + fmtTime(Math.abs(remaining)) + (remaining < 0 ? ' over' : ' left');
+  } else {
+    document.getElementById('allotted-label').textContent = 'no time set for this slide';
+  }
+}
+
+function toggleTimer() {
+  timerRunning = !timerRunning;
+  const btn = document.getElementById('timerToggle');
+  if (timerRunning) {
+    btn.textContent = 'Pause'; btn.className = 'timer-btn running';
+    timerInterval = setInterval(updateClock, 1000);
+  } else {
+    btn.textContent = 'Resume'; btn.className = 'timer-btn';
+    clearInterval(timerInterval);
+  }
+}
+
+function resetTimer() {
+  clearInterval(timerInterval); timerRunning = false;
+  totalSeconds = 0; slideSeconds = 0; slideStartAt = 0;
+  timerInterval = null;
+  document.getElementById('timerToggle').textContent = 'Start';
+  document.getElementById('timerToggle').className = 'timer-btn';
+  document.getElementById('clock-total').textContent = '00:00';
+  document.getElementById('clock-total').className = 'clock-big';
+  document.getElementById('slide-elapsed-label').textContent = 'this slide: 0:00';
+  renderTimerUI();
+}
+
+function updateTime() {
+  const d = new Date();
+  const el = document.getElementById('time-display');
+  if (el) el.textContent = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+
+function render() {
+  const list = document.getElementById('slideList');
+  const done = slides.filter(s => s.done).length;
+  const total = slides.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  const totalMins = slides.reduce((a,s) => a + (s.mins||0), 0);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = done + ' / ' + total + ' done';
+  document.getElementById('deck-label').textContent = total
+    ? total + ' slides \u00b7 ' + totalMins + ' min total'
+    : 'No slides yet';
+
+  list.innerHTML = '';
+  slides.forEach((slide, i) => {
+    const card = document.createElement('div');
+    card.className = 'slide-card' + (slide.done ? ' done-card' : '');
+    const numClass = slide.done ? 'done' : '';
+    const timingHtml = slide.mins
+      ? `<span class="timing-badge">${slide.mins} min</span>`
+      : `<span class="timing-badge no-time">no time set</span>`;
+    const notesPreview = slide.notes
+      ? `<div class="notes-text">${slide.notes}</div>`
+      : `<div class="notes-text" style="color:var(--hint);font-style:italic">No notes. Tap edit to add.</div>`;
+
+    card.innerHTML = `
+      <div class="slide-header" onclick="toggleNotes(${slide.id})">
+        <span class="slide-num ${numClass}">${String(i+1).padStart(2,'0')}</span>
+        <div class="slide-title-row">
+          <span class="slide-title-text">${escapeHtml(slide.title)}</span>
+          <div class="slide-timing-row">${timingHtml}</div>
+        </div>
+        <div class="slide-actions" onclick="event.stopPropagation()">
+          <button class="mini-btn ${slide.done?'done':''}" onclick="toggleDone(${slide.id})">${slide.done?'\u2713':'done'}</button>
+          <button class="mini-btn blue" onclick="editSlide(${slide.id})">edit</button>
+          <button class="mini-btn del" onclick="deleteSlide(${slide.id})">\u2715</button>
+        </div>
+      </div>
+      <div class="slide-notes" id="notes-${slide.id}">${notesPreview}</div>`;
+    list.appendChild(card);
+  });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toggleNotes(id) {
+  document.getElementById('notes-'+id).classList.toggle('open');
+}
+function toggleDone(id) {
+  const s = slides.find(s=>s.id===id); if(s) s.done=!s.done; saveData(); render();
+}
+function deleteSlide(id) {
+  if (!confirm('Delete this slide?')) return;
+  slides = slides.filter(s=>s.id!==id); saveData(); render();
+}
+
+function editSlide(id) {
+  const s = slides.find(s=>s.id===id); if(!s) return;
+  const n = document.getElementById('notes-'+id);
+  n.classList.add('open');
+  n.innerHTML = `
+    <input class="edit-title-input" id="et-${id}" value="${escapeHtml(s.title)}" />
+    <div class="timing-input-row">
+      <span class="timing-label">Allotted time:</span>
+      <input class="timing-input" id="em-${id}" type="number" min="0" value="${s.mins||''}" placeholder="\u2014" />
+      <span class="timing-label">min</span>
+    </div>
+    <textarea class="notes-textarea" id="en-${id}">${escapeHtml(s.notes)}</textarea>
+    <div class="edit-actions">
+      <button class="btn-cancel" onclick="render()">Cancel</button>
+      <button class="btn-save" onclick="saveEdit(${id})">Save</button>
+    </div>`;
+}
+
+function saveEdit(id) {
+  const s = slides.find(s=>s.id===id); if(!s) return;
+  s.title = document.getElementById('et-'+id).value.trim() || s.title;
+  s.notes = document.getElementById('en-'+id).value;
+  const mv = parseInt(document.getElementById('em-'+id).value);
+  s.mins = isNaN(mv) ? 0 : Math.max(0,mv);
+  saveData(); render();
+  setTimeout(() => { const n = document.getElementById('notes-'+id); if(n) n.classList.add('open'); }, 50);
+}
+
+function addSlide() {
+  const title = document.getElementById('newSlideTitle').value.trim();
+  if (!title) return;
+  const mv = parseInt(document.getElementById('newSlideMins').value);
+  slides.push({ id: nextId++, title, notes:'', mins: isNaN(mv)?0:Math.max(0,mv), done:false });
+  document.getElementById('newSlideTitle').value = '';
+  document.getElementById('newSlideMins').value = '';
+  saveData(); render();
+}
+
+document.getElementById('newSlideTitle').addEventListener('keydown', e => { if(e.key==='Enter') addSlide(); });
+
+function startPresenting() {
+  if (!slides.length) return;
+  presentIndex = 0; slideStartAt = 0; slideSeconds = 0;
+  updatePresentView();
+  document.getElementById('appNormal').classList.add('hidden');
+  document.getElementById('presentView').classList.add('active');
+  renderTimerUI();
+}
+
+function exitPresenting() {
+  clearInterval(timerInterval); timerRunning = false; timerInterval = null;
+  document.getElementById('timerToggle').textContent = 'Start';
+  document.getElementById('timerToggle').className = 'timer-btn';
+  document.getElementById('appNormal').classList.remove('hidden');
+  document.getElementById('presentView').classList.remove('active');
+  render();
+}
+
+function updatePresentView() {
+  const s = slides[presentIndex];
+  const total = slides.length;
+  const done = slides.filter(s=>s.done).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('present-slide-counter').textContent = 'Slide '+(presentIndex+1)+' of '+total;
+  document.getElementById('present-slide-title').textContent = s.title;
+  document.getElementById('present-notes-content').textContent = s.notes || 'No notes for this slide.';
+  document.getElementById('presentProgFill').style.width = pct+'%';
+  document.getElementById('prog-pct').textContent = pct+'% done';
+  document.getElementById('prog-done').textContent = done+' done';
+  document.getElementById('btn-prev').disabled = presentIndex===0;
+  document.getElementById('btn-next').disabled = presentIndex===total-1;
+  renderTimerUI();
+}
+
+function presentPrev() {
+  if (presentIndex>0) { presentIndex--; slideStartAt=totalSeconds; slideSeconds=0; updatePresentView(); }
+}
+function presentNext() {
+  if (presentIndex<slides.length-1) { presentIndex++; slideStartAt=totalSeconds; slideSeconds=0; updatePresentView(); }
+}
+function markCurrentDone() {
+  slides[presentIndex].done = !slides[presentIndex].done; saveData(); updatePresentView();
+}
+
+// Swipe navigation in present mode
+let touchStartX = 0;
+document.getElementById('presentView').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+document.getElementById('presentView').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 50) { dx < 0 ? presentNext() : presentPrev(); }
+}, { passive: true });
+
+// Init
+loadData();
+updateTime();
+setInterval(updateTime, 15000);
+render();
+</script>
+</body>
+</html>
